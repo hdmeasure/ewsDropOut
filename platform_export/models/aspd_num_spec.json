@@ -1,0 +1,31 @@
+{
+  "name": "aspd_num",
+  "family": "xgb",
+  "objective": "binary:logistic",
+  "features": [
+    "jk_bin",
+    "num",
+    "kode_pendidikan_ayah",
+    "kode_penghasilan_ayah",
+    "kode_penghasilan_ibu",
+    "sulingjar_D.18",
+    "sulingjar_D.2",
+    "sulingjar_D.6"
+  ],
+  "calibration": {
+    "method": "sigmoid",
+    "a": 0.6564035666898739,
+    "b": -3.10887532226242
+  },
+  "pi_train": 0.00975609756097561,
+  "pi_pop": 0.025,
+  "threshold": 0.22499905435753467,
+  "scoring_steps": [
+    "p_raw = booster.predict(X[features])",
+    "p_cal = calibrate(p_raw)               # sigmoid: 1/(1+exp(-(a*logit(p)+b)))",
+    "offset = log(pi_pop/(1-pi_pop)) - log(pi_train/(1-pi_train))",
+    "p_adj = sigmoid(logit(p_cal) + offset)",
+    "label = p_adj >= threshold"
+  ],
+  "notes": "Threshold operasional sebaiknya dihitung ulang pada populasi implementasi (kuantil 1-pi_pop) agar proporsi ter-flag = pi_pop."
+}

@@ -1,24 +1,33 @@
-# Ignore data files to prevent uploading sensitive datasets
-*.csv
+# === DATA: tidak pernah di-commit ===
 *.xlsx
 *.xls
-*.pkl
-*.png
+*.csv
+*.tsv
+*.parquet
+data/
+**/output/
+**/dataset*/
 
-# Python environment files
+# === Python ===
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
-venv/
+*.py[cod]
+.ipynb_checkpoints/
 .venv/
+venv/
+env/
 
-# OS specific files
+# === R ===
+.Rhistory
+.RData
+.Rproj.user/
+
+# === OS / editor ===
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# === Catatan ===
+# Artefak model di platform_export/models/ (*.json, *.rds, *.joblib) SENGAJA
+# di-commit (parameter model, bukan data). File data mentah dikecualikan di atas.

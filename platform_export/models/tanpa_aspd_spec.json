@@ -1,0 +1,68 @@
+{
+  "name": "tanpa_aspd",
+  "family": "xgb",
+  "objective": "binary:logistic",
+  "features": [
+    "jk_bin",
+    "kode_pendidikan_ayah",
+    "kode_penghasilan_ayah",
+    "kode_penghasilan_ibu",
+    "sulingjar_D.18",
+    "sulingjar_D.1",
+    "sulingjar_D.6"
+  ],
+  "calibration": {
+    "method": "isotonic",
+    "x": [
+      0.15471220016479492,
+      0.18230877816677094,
+      0.19811983406543732,
+      0.3159210681915283,
+      0.32006439566612244,
+      0.4224764406681061,
+      0.42610377073287964,
+      0.4952586591243744,
+      0.49743884801864624,
+      0.5563661456108093,
+      0.5584325790405273,
+      0.5975406765937805,
+      0.6001920104026794,
+      0.6575784683227539,
+      0.6609148383140564,
+      0.7254194021224976,
+      0.730994462966919,
+      0.8128751516342163
+    ],
+    "y": [
+      0.0,
+      0.0,
+      0.005025125574320555,
+      0.005025125574320555,
+      0.021452145650982857,
+      0.021452145650982857,
+      0.03368420898914337,
+      0.03368420898914337,
+      0.05454545468091965,
+      0.05454545468091965,
+      0.06792452931404114,
+      0.06792452931404114,
+      0.11173184216022491,
+      0.11173184216022491,
+      0.18857143819332123,
+      0.18857143819332123,
+      0.3333333432674408,
+      0.3333333432674408
+    ]
+  },
+  "pi_train": 0.04868913857677903,
+  "pi_pop": 0.025,
+  "threshold": 0.10428486702646877,
+  "scoring_steps": [
+    "p_raw = booster.predict(X[features])",
+    "p_cal = calibrate(p_raw)               # sigmoid: 1/(1+exp(-(a*logit(p)+b)))",
+    "offset = log(pi_pop/(1-pi_pop)) - log(pi_train/(1-pi_train))",
+    "p_adj = sigmoid(logit(p_cal) + offset)",
+    "label = p_adj >= threshold"
+  ],
+  "notes": "Threshold operasional sebaiknya dihitung ulang pada populasi implementasi (kuantil 1-pi_pop) agar proporsi ter-flag = pi_pop."
+}

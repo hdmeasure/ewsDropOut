@@ -1,64 +1,96 @@
-# Early Warning System (EWS) Student Drop Out Prediction
+# ewsDropOut — Early Warning System for Student Dropout (SMP)
 
-Repository ini berisi kode sumber (*source code*) untuk melatih model Machine Learning berbasis **XGBoost** guna memprediksi risiko siswa putus sekolah atau Drop Out (DO/LTM) di tingkat SMP. Model ini memanfaatkan kombinasi variabel personal, demografi/ekonomi orang tua, hasil akademis ujian nasional (ASPD), serta survei lingkungan sekolah (Sulingjar).
+Pipeline machine learning untuk memprediksi **risiko putus sekolah (drop out / DO)**
+siswa jenjang SMP, beserta workflow penyiapan data, pelatihan, evaluasi, dan ekspor
+model multi-format untuk integrasi platform.
 
-## 🚀 Fitur Utama
-1.  **Preprocessing & Encoding**: Mengonversi variabel ordinal Dapodik dan Sulingjar secara otomatis ke bentuk angka standar.
-2.  **Feature Selection**: Menyaring variabel-variabel yang tidak signifikan secara otomatis (importance score < 0.02) menggunakan baseline model sebelum *tuning*.
-3.  **Hyperparameter Tuning**: Melakukan pencarian parameter optimal dengan `RandomizedSearchCV` menggunakan Cross-Validation.
-4.  **Threshold Optimization**: Mencari *threshold* probabilistik seimbang (F1-score maksimum) untuk menyesuaikan ketidakseimbangan kelas.
-
----
-
-## 📂 Struktur Repositori
-- `train.py`: Skrip utama untuk preprocessing, seleksi fitur, tuning hyperparameter, evaluasi model, dan serialisasi model.
-- `CODEBOOK.md`: Kamus data yang menjelaskan setiap kolom prediktor, tipe data, serta aturan kodifikasinya.
+Repositori ini berisi **kode, dokumentasi, dan model terlatih** — **tidak** menyertakan
+data mentah siswa (data bersifat rahasia dan dikelola terpisah).
 
 ---
 
-## 🛠️ Cara Memulai
+## Apa yang diprediksi
 
-### 1. Prasyarat & Instalasi
-Instal pustaka Python yang diperlukan terlebih dahulu:
-```bash
-pip install pandas numpy xgboost scikit-learn
-```
+Model menghasilkan, untuk tiap siswa:
+- `prob_do` — probabilitas risiko DO (terkalibrasi, sudah dikoreksi ke base rate populasi),
+- `risiko_do` — label `BERISIKO` / `Tidak`,
+- `alasan_risiko` — faktor pendorong utama (berbasis SHAP) untuk tiap siswa berisiko.
 
-### 2. Mempersiapkan Data
-Pastikan Anda menaruh file data Anda di direktori yang sama dengan nama file:
-- `dataset_do.csv` (data siswa yang teridentifikasi Drop Out/LTM)
-- `dataset_nondo.csv` (data siswa aktif/kontrol)
-
-Kolom prediktor dan kunci pencocokan (seperti `NISN` dan `NPSN`) harus mengikuti pedoman yang tertera di [CODEBOOK.md](CODEBOOK.md).
-
-### 3. Menjalankan Pelatihan Model
-Jalankan perintah berikut pada terminal Anda untuk melatih model:
-```bash
-python3 train.py
-```
-Skrip akan mencetak proses pembersihan data, variabel yang dibuang, hasil parameter terbaik, metrik evaluasi test set (Precision, Recall, F1, AUC), dan menyimpan model akhir sebagai `model_ews_do.pkl`.
+Proporsi siswa yang ditandai berisiko dijaga **rasional** (mengikuti base rate populasi
+yang dapat diatur, mis. 2,5%), sehingga jumlah sasaran intervensi tetap masuk akal.
 
 ---
 
-## 🔄 Konversi Model ke Format R (.rds)
+## Sumber variabel (generik)
 
-Jika Anda ingin menggunakan model hasil pelatihan Python ini di dalam lingkungan **bahasa R (RStudio)**, Anda dapat mengonversinya menjadi file `.rds` secara otomatis.
+| Kelompok | Variabel |
+|---|---|
+| Demografi | jenis kelamin |
+| Sosial-ekonomi (administratif) | pendidikan & penghasilan ayah/ibu (ordinal) |
+| Asesmen standar | skor numerasi (ASPD) |
+| Mutu sekolah | indikator survei lingkungan belajar (ordinal 1–3) |
 
-### 1. Cara Konversi ke RDS
-Pastikan Anda telah menginstal R dan pustaka `xgboost` di R. Kemudian jalankan skrip konversi:
+Variabel akademik lain (literasi membaca & sains) **sengaja tidak dipakai** pada model
+utama karena pada data kami menunjukkan hubungan yang tidak valid (artefak cakupan
+sampel); lihat [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+
+---
+
+## Dua model (pendekatan tiered)
+
+| Model | Dipakai untuk | Catatan |
+|---|---|---|
+| `aspd_num` (utama) | siswa yang memiliki skor numerasi | diskriminasi tinggi, faktor risiko logis (sosial-ekonomi) |
+| `tanpa_aspd` (fallback) | siswa tanpa skor asesmen | hanya variabel administratif + mutu sekolah |
+
+Keduanya **XGBoost** (portabel lintas R/Python), dengan kalibrasi probabilitas +
+koreksi prior + threshold berbasis base rate.
+
+---
+
+## Struktur repositori
+
+```
+workflow/         Skrip pipeline (data -> model final): m0..m6 + modul pendukung
+platform_export/  Ekspor model ke .rds / .json / .joblib + contoh skoring R & Python
+docs/             METHODOLOGY, CODEBOOK, FLOWCHART
+requirements.txt  Dependensi Python
+```
+
+- Alur lengkap & diagram: [docs/FLOWCHART.md](docs/FLOWCHART.md)
+- Metodologi & dasar literatur: [docs/METHODOLOGY.md](docs/METHODOLOGY.md)
+- Kamus variabel: [docs/CODEBOOK.md](docs/CODEBOOK.md)
+- Cara pakai model di platform: [platform_export/README.md](platform_export/README.md)
+
+---
+
+## Menjalankan pelatihan (dengan data Anda sendiri)
+
+Data tidak disertakan. Sediakan dataset berlabel sesuai [docs/CODEBOOK.md](docs/CODEBOOK.md),
+lalu:
+
 ```bash
-python3 convert_to_rds.py
+pip install -r requirements.txt
+cd workflow
+python3 m0_siapkan_input.py
+python3 m1_nested_cv.py --scenario all
+python3 m2_finalisasi_model.py --scenario aspd_num  --pi 0.025
+python3 m2_finalisasi_model.py --scenario tanpa_aspd --family xgb --pi 0.025
+python3 m3_evaluasi_test.py
+python3 m6_implementasi_tiered.py --pi 0.025
 ```
-Skrip ini akan memuat `model_ews_do.pkl`, mengekspor struktur XGBoost ke JSON sementara, lalu memanggil compiler R untuk menyimpan model tersebut sebagai `model_ews_do.rds`.
 
-### 2. Cara Menggunakan Model RDS di R
-Untuk memuat dan menggunakan model hasil konversi tersebut di R, Anda dapat melihat contoh kode pada file [predict_example.R](predict_example.R) atau ikuti format berikut:
-```R
-library(xgboost)
+## Memakai model terlatih (platform)
 
-# Muat model
-model_ews <- readRDS("model_ews_do.rds")
-
-# Prediksi data baru (data_baru harus berupa matrix dengan 16 kolom fitur yang selaras)
-prediksi_prob <- predict(model_ews, newdata = data_baru)
+```bash
+cd platform_export
+Rscript predict.R aspd_num input.csv      # R, dari .rds
+python3 predict.py aspd_num input.csv     # Python, dari spec.json + booster.json
 ```
+
+---
+
+## Lisensi & data
+
+Kode untuk keperluan internal tim platform. **Tidak ada data pribadi siswa** di
+repositori ini.
