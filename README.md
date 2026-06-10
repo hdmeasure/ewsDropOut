@@ -37,3 +37,28 @@ Jalankan perintah berikut pada terminal Anda untuk melatih model:
 python3 train.py
 ```
 Skrip akan mencetak proses pembersihan data, variabel yang dibuang, hasil parameter terbaik, metrik evaluasi test set (Precision, Recall, F1, AUC), dan menyimpan model akhir sebagai `model_ews_do.pkl`.
+
+---
+
+## 🔄 Konversi Model ke Format R (.rds)
+
+Jika Anda ingin menggunakan model hasil pelatihan Python ini di dalam lingkungan **bahasa R (RStudio)**, Anda dapat mengonversinya menjadi file `.rds` secara otomatis.
+
+### 1. Cara Konversi ke RDS
+Pastikan Anda telah menginstal R dan pustaka `xgboost` di R. Kemudian jalankan skrip konversi:
+```bash
+python3 convert_to_rds.py
+```
+Skrip ini akan memuat `model_ews_do.pkl`, mengekspor struktur XGBoost ke JSON sementara, lalu memanggil compiler R untuk menyimpan model tersebut sebagai `model_ews_do.rds`.
+
+### 2. Cara Menggunakan Model RDS di R
+Untuk memuat dan menggunakan model hasil konversi tersebut di R, Anda dapat melihat contoh kode pada file [predict_example.R](predict_example.R) atau ikuti format berikut:
+```R
+library(xgboost)
+
+# Muat model
+model_ews <- readRDS("model_ews_do.rds")
+
+# Prediksi data baru (data_baru harus berupa matrix dengan 16 kolom fitur yang selaras)
+prediksi_prob <- predict(model_ews, newdata = data_baru)
+```
